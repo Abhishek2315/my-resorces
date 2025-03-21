@@ -1,1 +1,279 @@
+<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security</artifactId>
+</dependency>
 
+This dependency is used for auto configure Spring Security in your app.
+It applies form based Authentication in your app and then we can customize Spring Security as per need.
+FormBased Authentication means it create a login form when you hit any APIs that form first check valid user then APIs should be run and you can also set
+ username and password as like in (application.propertise)
+#spring.security.user.name=root
+#spring.security.user.password=root
+
+
+
+//---------------------------------------------- Java Configuration------------------------------//
+https://docs.spring.io/spring-security/reference/servlet/configuration/java.html
+
+BasicAuthenticationFilter.class
+AuthenticationManager.class
+ProviderManager.class
+
+---------------------------------------------------Deprecated Spring Security Methods---------------------------------------------------------------------------------
+
+// WebSecurityConfigurerAdaptor
+//this method of spring security had been deprecated instead of it
+//SecurityFilterChain method was newly used.
+
+
+//package learn.spring.security.configuration;
+//
+//import org.springframework.context.annotation.Configuration;
+//import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+//import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+//
+//import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+//import org.springframework.security.core.Authentication;
+
+//@Configuration
+//@EnableWebSecurity
+//public class OldSecurityConfig extends WebSecurityConfigurerAdaptor{
+//
+//    @Override
+//    protected void configure(HttpSecurity http) throws Exception {
+//
+//        http
+//                // Configure authorization rules
+//                .authorizeRequests()
+//
+//                // Require authentication for any other request
+//                .anyRequest()
+//                .authenticated()
+//                .and()
+//                .httpbasic();
+
+//                //Or we can do these request types to make basic login authentication
+
+////                // Configure form-based login
+////                .formLogin()
+////                // Specify the custom login page URL
+////                .loginPage("/login")
+////                // Allow everyone to access the login page
+////                .permitAll()
+////                .and()
+////                // Configure logout functionality
+////                .logout()
+////                // Allow everyone to access the logout functionality
+////                .permitAll();
+//    }
+
+//    @Override
+//    protected void configure(AuthenticationManagerBuilder authenticationManagerBuilder) throws Exception{
+//        authenticationManagerBuilder.inMemoryAuthentication().withUser("abc").password("adfds").roles("admin");
+//    }
+
+//}
+-----------------------------------------------------------Complete Deprecated Old Spring Security Method------------------------------------------------------- 
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+
+/**
+ * Configuration class for Spring Security.
+ * This class extends WebSecurityConfigurerAdapter to provide custom security configurations.
+ */
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+
+    /**
+     * Configures the security settings for the application.
+     *
+     * @param http the HttpSecurity object to configure.
+     * @throws Exception if an error occurs during configuration.
+     */
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http
+            // Configure authorization rules
+            .authorizeRequests()
+                // Allow access to any URL under /public/ without authentication
+                .antMatchers("/public/**").permitAll()
+                // Require authentication for any other request
+                .anyRequest().authenticated()
+            .and()
+            // Configure form-based login
+            .formLogin()
+                // Specify the custom login page URL
+                .loginPage("/login")
+                // Allow everyone to access the login page
+                .permitAll()
+            .and()
+            // Configure logout functionality
+            .logout()
+                // Allow everyone to access the logout functionality
+                .permitAll();
+    }
+}
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+//-------differnce between antMatchers and requestMatchers------///
+
+In Spring Security 5.8, the antMatchers, mvcMatchers, and regexMatchers methods were deprecated in favor of new requestMatchers methods.
+The new requestMatchers methods were added to authorizeHttpRequests, authorizeRequests, CSRF configuration, WebSecurityCustomizer and
+any other places that had the specialized RequestMatcher methods. The deprecated methods are removed in Spring Security 6.
+
+for details information go to
+https://docs.spring.io/spring-security/reference/5.8/migration/servlet/config.html
+
+
+///---------------Role Based Authentication and Permission(Authorities) Based Authentication----------------------////
+
+Role based means a user have role-> USER and their authorities(Permission) -> Read only
+Role based means a user have role-> ADMIN and their authorities(Permission) -> Read, Write, Update etc.
+
+for detail info 
+https://www.geeksforgeeks.org/spring-security-role-based-authentication/
+https://www.geeksforgeeks.org/spring-security-role-based-and-permission-based-access-control/
+
+
+////--------------------------------what is csrf in spring security and why we disable it-------------------------------------------////
+
+Our recommendation is to use CSRF protection for any request that could be processed by a browser by normal users. 
+If you are only creating a service that is used by non-browser clients, you will likely want to disable CSRF protection.
+It shouldn't impact the performance. A filter (or another component) will be removed from the request processing chain to make the feature unavailable.
+
+What is the reason to disable csrf in a Spring Boot application?
+You are using another token mechanism.
+You want to simplify interactions between a client and the server.
+
+for more details
+https://www.geeksforgeeks.org/csrf-protection-in-spring-security/
+https://www.baeldung.com/spring-security-csrf
+
+here are method to enable and used csrf token in spring security
+-------------------------------------------------------------------------------------------------------
+@Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http
+            .csrf().csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+            .and()
+            // Configure authorization rules
+            .authorizeRequests()
+                // Allow access to any URL under /public/ without authentication
+                .antMatchers("/public/**").permitAll()
+                // Require authentication for any other request
+                .anyRequest().authenticated()
+            .and()
+            // Configure form-based login
+            .formLogin()
+                // Specify the custom login page URL
+                .loginPage("/login")
+                // Allow everyone to access the login page
+                .permitAll()
+            .and()
+            // Configure logout functionality
+            .logout()
+                // Allow everyone to access the logout functionality
+                .permitAll();
+    }
+--------------------------------------------------------------------------------------------------------------
+after using this method hit GET api and go to response and check for cookies 
+In cookies, you will get your csrf token for that api hit
+
+and for using POST api you have to set in header X-XSRF-TOKEN: qiwu4ow-udbwb3-wdejniw2hdwoi
+and with this you also have to set basic Auth.
+
+
+--------------------------------------------New Method of Spring Security using Custom Form based authentication-----------------------------------------------
+
+-----------------Define the SecurityFilterChain Bean-------------------------------
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.web.SecurityFilterChain;
+
+/**
+ * Configuration class for Spring Security.
+ * This class defines the SecurityFilterChain bean to provide custom security configurations.
+ */
+@Configuration
+public class SecurityConfig {
+
+    /**
+     * Defines the security filter chain.
+     *
+     * @param http the HttpSecurity object to configure.
+     * @return the SecurityFilterChain bean.
+     * @throws Exception if an error occurs during configuration.
+     */
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+            // Configure authorization rules
+            .authorizeRequests()
+                // Allow access to any URL under /public/ without authentication
+                .antMatchers("/public/**").permitAll()
+                // Require authentication for any other request
+                .anyRequest().authenticated()
+            .and()
+            // Configure form-based login
+            .formLogin()
+                // Specify the custom login page URL
+                .loginPage("/login")
+                // Allow everyone to access the login page
+                .permitAll()
+            .and()
+            // Configure logout functionality
+            .logout()
+                // Allow everyone to access the logout functionality
+                .permitAll();
+        
+        // Return the configured SecurityFilterChain
+        return http.build();
+    }
+}
+
+------------------------- UserDetailsService Configuration------------------------------
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.security.core.userdetails.User;
+
+/**
+ * Configuration class for setting up user details service.
+ * This class defines the UserDetailsService bean for in-memory user details management.
+ */
+@Configuration
+public class UserConfig {
+
+    /**
+     * Defines an in-memory user details service.
+     *
+     * @return the UserDetailsService bean.
+     */
+    @Bean
+    public UserDetailsService userDetailsService() {
+        // Create an in-memory user details manager
+        var userDetailsService = new InMemoryUserDetailsManager();
+        
+        // Define a user with username 'user', password 'password', and role 'USER'
+        var user = User.withUsername("user")
+                       .password("{noop}password") // {noop} indicates that no password encoder is used
+                       .roles("USER")
+                       .build();
+        
+        // Add the user to the in-memory user details manager
+        userDetailsService.createUser(user);
+        
+        // Return the configured UserDetailsService bean
+        return userDetailsService;
+    }
+}
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------
